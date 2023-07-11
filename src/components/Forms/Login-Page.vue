@@ -1,7 +1,6 @@
 <template>
   <div>
-
-    <el-form>
+    <el-form ref="loginForm">
       <el-form-item label="用户名">
         <el-input v-model="username" placeholder="请输入用户名" clearable></el-input>
       </el-form-item>
@@ -9,82 +8,72 @@
       <el-form-item label="密码">
         <el-input v-model="password" placeholder="请输入密码" show-password clearable></el-input>
       </el-form-item>
-
     </el-form>
 
     <el-row type="flex" class="row-bg" justify="center">
       <el-col justify="center">
-        <el-button type="primary" @click="submit">登录/注册</el-button>
+        <el-button type="primary" @click="submit">登录</el-button>
       </el-col>
     </el-row>
-
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import {base_url} from "../../../config";
-export default {
+import { base_url } from "../../../config";
+import { MessageBox } from "element-ui";
+import router from "@/router";
 
-  methods:{
-    submitForm() {
-      this.$refs.vFormRef.getFormData().then(formData => {
-        // Form Validation OK
-        alert( JSON.stringify(formData) )
-      }).catch(error => {
-        // Form Validation failed
-        this.$message.error(error)
-      })
-    },
-    submit(){
-      // 检查用户名和密码是否为空
-      if(!this.username || !this.password){
-        this.$message.error('用户名或密码不能为空');
+export default {
+  data() {
+    return {
+      username: "",
+      password: ""
+    };
+  },
+  methods: {
+    submit() {
+      if (!this.username || !this.password) {
+        this.$message.error("用户名或密码不能为空");
         return;
       }
 
-      axios.post(`${base_url}/login`, {
-        username : this.username,
-        password: this.password
-      })
+      axios
+          .post(`${base_url}/login`, {
+            username: this.username,
+            password: this.password
+          })
           .then((response) => {
-            // 检查返回的code是否为1
-            if(response.data.code === 1){
-              // 显示成功消息
+            if (response.data.code === 1) {
               this.$message({
-                message: '登录成功',
-                type: 'success'
+                message: "登录成功",
+                type: "success"
               });
-              // // 重定向到其他页面
-              // window.location.href = "/SomeOtherPage"
+              router.push({ name: "ResumeUploader" }); // 跳转到ResumeUploader界面
             }
-            if (response.data.message === '用户不存在') {
-              // 提示用户是否注册
-              this.$confirm('用户不存在，是否注册新用户?', '提示', {
-                confirmButtonText: '注册',
-
-                cancelButtonText: '取消',
-                type: 'warning'
-              }).then(() => {
-                // 用户点击了“注册”按钮，跳转到注册页面
-
-                window.location.href = 'src/components/Forms/Register-Page.vue';
-              }).catch((error) => {
-                // 用户点击了“取消”按钮，不做任何操作
+            else if (response.data.message === "用户不存在") {
+              // User not found, ask if they want to register
+              MessageBox.confirm("用户名不存在，是否注册？", "提示", {
+                confirmButtonText: "确定",
+                cancelButtonText: "取消",
+                type: "warning"
               })
-            }
-            else {
-              // 显示错误消息
+                  .then(() => {
+                    this.$emit("userNotFound"); // Switch to the register form
+                  })
+                  .catch(() => {
+                    // Do nothing, user chose not to register
+                  });
+            } else {
               this.$message.error(response.data.message);
             }
-          }, (error) => {
-            console.log(error)
-            // 如果请求失败，显示一个错误消息
-            this.$message.error('请求失败，请重试');
           })
-
-
+          .catch((error) => {
+            console.log(error);
+            this.$message.error("请求失败，请重试");
+          });
     }
   }
-}
+
+};
 </script>
